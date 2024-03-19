@@ -15,6 +15,7 @@ PASSWORD = Properties.PASSWORD
 API_TOKEN = Properties.API_TOKEN
 ############################################
 
+
 def GetToken(API_TOKEN):
     try:
         url = f"{Properties.HOSTNAME}/concerto/services/rest/RepositoryService/v1/Tokens"
@@ -25,13 +26,16 @@ def GetToken(API_TOKEN):
         print(f"Failed to get token: {e}")
         quit()
 
+
 def UpdateTenantToken(USERNAME, PASSWORD, TENANT):
     try:
         url = f"{Properties.HOSTNAME}/concerto/services/rest/RepositoryService/v1/Tokens"
-        response = requests.put(url, json={"userName":USERNAME, "password":PASSWORD, "tenant":TENANT})
-        response.raise_for_status()  # Raises an exception for 4xx and 5xx status codes
+        response = requests.put(
+            url, json={"userName": USERNAME, "password": PASSWORD, "tenant": TENANT})
+        response.raise_for_status()
         token = response.json()['token']
-        print('::::::::::::::Getting Tenant Token::::::::::::::\n'+'INFO: Tenant Auth Token = '+token)
+        print('::::::::::::::Getting Tenant Token::::::::::::::\n' +
+              'INFO: Tenant Auth Token = '+token)
         return token
     except Exception as e:
         print(f"Failed to get Token {e}")

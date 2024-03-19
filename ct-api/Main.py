@@ -37,7 +37,7 @@ MAX_RETRY_COUNT = 60
 MAX_RETRY_DELAY = 30  # Value in Seconds
 
 print('Starting...')
-#Generate Token
+# Generate Token
 token = Authenticate.UpdateTenantToken(USERNAME, PASSWORD, TENANT)
 header = {"Content-Type": "application/json", "X-Auth-Token": token}
 
@@ -58,7 +58,8 @@ except:
 time.sleep(10)
 
 # Start the Grid
-print("::::::::::::::Starting Grid.::::::::::::::\n" + "INFO: Grid Name = " + GRID_NAME + " & Grid Id = " + grid_id)
+print("::::::::::::::Starting Grid.::::::::::::::\n" +
+      "INFO: Grid Name = " + GRID_NAME + " & Grid Id = " + grid_id)
 url = HOSTNAME + '/concerto/services/rest/CloudService/v1/grid/' + grid_id + '/action'
 json_str = {"action": "start"}
 try:
@@ -101,9 +102,11 @@ time.sleep(10)
 # Load the composition
 json_str = {"compositionName": COMPS_PATH}
 instance_id = None
-print("::::::::::::::Loading the Compostition.::::::::::::::\n" + "INFO: Composition Name = " + COMPS_PATH)
+print("::::::::::::::Loading the Compostition.::::::::::::::\n" +
+      "INFO: Composition Name = " + COMPS_PATH)
 try:
-    results = requests.post(HOSTNAME + '/concerto/services/rest/composition/instances/v1?command=load', json=json_str, headers=header, verify=False)
+    results = requests.post(HOSTNAME + '/concerto/services/rest/composition/instances/v1?command=load',
+                            json=json_str, headers=header, verify=False)
     instance_id = str(results.json()['instanceID'])
     if instance_id is None:
         sys.exit("ERROR: Load Composition - No Active InstanceID Found!")
@@ -123,7 +126,8 @@ time.sleep(5)
 json_str = {"compositionName": COMPS_PATH}
 results_id = None
 try:
-    results = requests.put(HOSTNAME + '/concerto/services/rest/composition/instances/v1/' + instance_id + '?command=play', json=json_str, headers=header, verify=False)
+    results = requests.put(HOSTNAME + '/concerto/services/rest/composition/instances/v1/' +
+                           instance_id + '?command=play', json=json_str, headers=header, verify=False)
     instance_id = str(results.json()['instanceID'])
     if instance_id is None:
         sys.exit("ERROR: No Active InstanceID Found, Play Composition Failed!")
@@ -148,12 +152,12 @@ while PLAY:
         break
     results_id = str(results.json()['resultid'])
 
-
     # Get duration in seconds
     totalTime = int(results.json()['totalTime'])/1000
     if totalTime > CHECK_ERROR_DURATION:
         # Get clip-element groupBy=error
-        url = HOSTNAME + '/concerto/services/rest/Results/v1/' + results_id + '/clip-element?elementType=message'
+        url = HOSTNAME + '/concerto/services/rest/Results/v1/' + \
+            results_id + '/clip-element?elementType=message'
         results = requests.get(url, headers=header, verify=False)
         # print(results.text)
         totalCount = results.json()['elementTypes'][0]['metrics']['count']
@@ -163,11 +167,14 @@ while PLAY:
         # Check the number of errors aginst the defined SLA
         if errorPercentage > SLA_ERRORS:
             PLAY = False
-            
+
             # stop the composition
-            results_url = HOSTNAME + '/concerto/services/rest/composition/instances/v1/' + instance_id + '?command=stop'
-            results = requests.put(results_url, json=json_str, headers=header, verify=False)
-            url = HOSTNAME + '/concerto/services/rest/Results/v1/' + results_id + '/clip-element?groupBy=error'
+            results_url = HOSTNAME + '/concerto/services/rest/composition/instances/v1/' + \
+                instance_id + '?command=stop'
+            results = requests.put(
+                results_url, json=json_str, headers=header, verify=False)
+            url = HOSTNAME + '/concerto/services/rest/Results/v1/' + \
+                results_id + '/clip-element?groupBy=error'
             results = requests.get(url, headers=header, verify=False)
             error_Info = str(results.json()['errors'])
             for item in (results.json()['errors']):
@@ -203,7 +210,8 @@ time.sleep(10)
 
 # Pull all results for the composition
 header = {"Content-Type": "application/json", "X-Auth-Token": token}
-url = HOSTNAME + '/concerto/services/rest/Results/v1?composition=' + urllib.parse.quote(COMPS_PATH)
+url = HOSTNAME + '/concerto/services/rest/Results/v1?composition=' + \
+    urllib.parse.quote(COMPS_PATH)
 results = requests.get(url, headers=header, verify=False)
 print("::::::::::::::Getting Test Results...::::::::::::::")
 latest_result_id = str(results.json()['results'][0]['id'])
@@ -213,14 +221,16 @@ print('INFO: Filename = '+exportFileName)
 
 
 # Get Metrics for a resultId
-url = HOSTNAME + "/concerto/services/rest/Results/v1/" + latest_result_id + "/collection?percentile=90&percentile=95&percentile=99&groupBy=flattenedHierarchy"
+url = HOSTNAME + "/concerto/services/rest/Results/v1/" + latest_result_id + \
+    "/collection?percentile=90&percentile=95&percentile=99&groupBy=flattenedHierarchy"
 indv_result = requests.get(url, headers=header, verify=False)
 final_list = []
 for key, value in (indv_result.json().items()):
     for trans in value:
-        if (trans['containerType'] == 'transaction'):   #Search for Transaction Container
+        if (trans['containerType'] == 'transaction'):  # Search for Transaction Container
             ind_trans = trans['metrics']
-            trans_name = trans['flattenedHierarchy'].split('/')[-1]  # Get Transaction Name
+            trans_name = trans['flattenedHierarchy'].split(
+                '/')[-1]  # Get Transaction Name
             trans_count = ind_trans['started']
             trans_min = 'minEffectiveDuration'
             if trans_min in ind_trans:
@@ -242,10 +252,14 @@ for key, value in (indv_result.json().items()):
             trans_std = ind_trans['effectiveDurationStandardOfDeviation']
             t_std = format(float(trans_std/1000), ".2f")
             trans_percentiles = ind_trans['percentiles']
-            t_percentile_90 = format(float(trans_percentiles[0]['value'])/1000, ".2f")
-            t_percentile_95 = format(float(trans_percentiles[0]['value'])/1000, ".2f")
-            t_percentile_99 = format(float(trans_percentiles[0]['value'])/1000, ".2f")
-            final_list.append([trans_name, trans_count, t_min, t_avg, t_max, t_percentile_90, t_percentile_95, t_percentile_99, t_std])
+            t_percentile_90 = format(
+                float(trans_percentiles[0]['value'])/1000, ".2f")
+            t_percentile_95 = format(
+                float(trans_percentiles[0]['value'])/1000, ".2f")
+            t_percentile_99 = format(
+                float(trans_percentiles[0]['value'])/1000, ".2f")
+            final_list.append([trans_name, trans_count, t_min, t_avg, t_max,
+                              t_percentile_90, t_percentile_95, t_percentile_99, t_std])
 
 
 print(final_list)
@@ -260,16 +274,16 @@ df.rename(columns={0: 'Transaction',
                    7: '99th Percentile[s]',
                    8: 'Standard Deviation[s]'}, inplace=True)
 
-#df = df.pivot(index='Transaction')
-#Get the current python script path
+# df = df.pivot(index='Transaction')
+# Get the current python script path
 #
 # scriptPath = os.path.abspath(__file__)
 script_directory = os.path.dirname(os.path.abspath(__file__))
-#path = scriptPath[0:scriptPath.rfind('/')+1]
+# path = scriptPath[0:scriptPath.rfind('/')+1]
 export_directory = os.path.join(script_directory, "ResultExports")
 export_file_path = os.path.join(export_directory, exportFileName)
 df.to_csv(export_file_path, index=True, header=True)
-#df.to_csv(path + exportFileName, index=True, header=True)
+# df.to_csv(path + exportFileName, index=True, header=True)
 print("INFO: Results Exported to " + export_file_path + exportFileName)
 
 # ------------------------------------------------------------EOF------------------------------------------------------------
